@@ -59,7 +59,7 @@ def extract_ecg_features(record_path):
     
     # Optionally, pool features
     pooled = features.mean(dim=1)  # global average pooling across time
-    np.save('features.npy', pooled.numpy())
+    np.save('features.npy', pooled.detach().numpy())
 
     return pooled.detach().numpy()
 
