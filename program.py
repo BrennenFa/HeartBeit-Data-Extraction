@@ -1,6 +1,8 @@
 import wfdb
 import scipy.io
 import numpy as np
+import glob
+from scipy.signal import resample
 
 def load_ecg_record(record_path):
     record = wfdb.rdrecord(record_path)
@@ -8,7 +10,6 @@ def load_ecg_record(record_path):
     return signal
 
 
-from scipy.signal import resample
 
 def preprocess_signal(signal, original_fs=500, target_fs=250, duration=10):
     signal = signal[:original_fs * duration]  # clip to 10s
@@ -61,7 +62,6 @@ def extract_ecg_features(record_path):
 
     return pooled.detach().numpy()
 
-import glob
 
 if __name__ == '__main__':
     mat_files = glob.glob('data/**/*.mat', recursive=True)
