@@ -65,7 +65,7 @@ def extract_ecg_features(record_path):
 
 
 if __name__ == '__main__':
-    mat_files = glob.glob('data/**/*.mat', recursive=True)
+    mat_files = glob.glob('data/**/*.dat', recursive=True)
     print(mat_files)
     print("FILES ^")
     for mat_file in mat_files:
