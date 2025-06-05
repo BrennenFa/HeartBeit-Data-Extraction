@@ -65,11 +65,11 @@ def extract_ecg_features(record_path):
 
 
 if __name__ == '__main__':
-    mat_files = glob.glob('data/**/*.dat', recursive=True)
-    print(mat_files)
-    print("FILES ^")
-    for mat_file in mat_files:
-        record_path = os.path.splitext(mat_file)[0]  # strip .mat extension
+    files = glob.glob('data/**/*.dat', recursive=True)
+    print(files)
+    print("FILES  ^")
+    for file in files:
+        record_path = os.path.splitext(file)[0]  # strip .mat extension
         print(f"Processing: {record_path}")
         try:
             features = extract_ecg_features(record_path)
