@@ -61,8 +61,16 @@ def extract_ecg_features(record_path):
 
     return pooled.detach().numpy()
 
+import glob
 
 if __name__ == '__main__':
-    record_path = 'data/10000152'  # omit extension; wfdb will find .hea/.mat
-    features = extract_ecg_features(record_path)
-    print("Extracted features shape:", features.shape)
+    mat_files = glob.glob('data/**/*.mat', recursive=True)
+
+    for mat_file in mat_files:
+        record_path = os.path.splitext(mat_file)[0]  # strip .mat extension
+        print(f"Processing: {record_path}")
+        try:
+            features = extract_ecg_features(record_path)
+            print(f"Extracted features shape: {features.shape}")
+        except Exception as e:
+            print(f"Failed to process {record_path}: {e}")
