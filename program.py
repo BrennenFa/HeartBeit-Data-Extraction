@@ -4,6 +4,9 @@ import numpy as np
 import glob
 import os
 from scipy.signal import resample
+import torch
+import torch.nn as nn
+import pandas as pd
 
 def load_ecg_record(record_path):
     record = wfdb.rdrecord(record_path)
@@ -26,8 +29,6 @@ def create_sequence_windows(signal, window_size=250, step=125):
         windows.append(window)
     return np.stack(windows)  # shape: (seq_len, window_size, channels)
 
-import torch
-import torch.nn as nn
 
 class ECGTransformer(nn.Module):
     def __init__(self, input_dim=1, model_dim=64, num_heads=4, num_layers=2, seq_len=80):
@@ -55,24 +56,30 @@ def extract_ecg_features(record_path):
     
     sequence_tensor = torch.tensor(sequence, dtype=torch.float32).unsqueeze(0)  # batch=1
     model = ECGTransformer(input_dim=signal.shape[1])
-    features = model(sequence_tensor)
+    model.eval()
     
-    # Optionally, pool features
-    pooled = features.mean(dim=1)  # global average pooling across time
-    np.save('features.npy', pooled.detach().numpy())
+    with torch.no_grad():
+      features = model(sequence_tensor)
+      pooled = features.mean(dim=1)  # global average pooling across time
+      return pooled.squeeze(0).numpy()
 
-    return pooled.detach().numpy()
+ecgFeatures = []
+ids = []
+files = glob.glob('data/**/*.dat', recursive=True)
+print(files)
+print("FILES  ^")
+for file in files:
+    record_path = os.path.splitext(file)[0]
+    record_id = os.path.basename(record_path)
 
+    print(f"Processing: {record_path}")
+    try:
+        features = extract_ecg_features(record_path)
+        ecgFeatures.append(features)
+        ids.append(record_id)
+    except Exception as e:
+        print(f"Failed to process {record_path}: {e}")
 
-if __name__ == '__main__':
-    files = glob.glob('data/**/*.dat', recursive=True)
-    print(files)
-    print("FILES  ^")
-    for file in files:
-        record_path = os.path.splitext(file)[0]  # strip .mat extension
-        print(f"Processing: {record_path}")
-        try:
-            features = extract_ecg_features(record_path)
-            print(f"Extracted features shape: {features.shape}")
-        except Exception as e:
-            print(f"Failed to process {record_path}: {e}")
+df = pd.DataFrame(ecgFeatures)
+df.insert(0, "record_id", ids)
+df.to_csv("ecg_features_all.csv", index=False)
