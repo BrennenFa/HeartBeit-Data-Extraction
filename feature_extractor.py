@@ -8,9 +8,30 @@ import torch
 import torch.nn as nn
 import pandas as pd
 
+
+# ML Model
+class ECGTransformer(nn.Module):
+    def __init__(self, input_dim=1, model_dim=64, num_heads=4, num_layers=2, seq_len=80):
+        super().__init__()
+        self.input_proj = nn.Linear(250 * input_dim, model_dim)
+        encoder_layer = nn.TransformerEncoderLayer(d_model=model_dim, nhead=num_heads)
+        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+        self.output_proj = nn.Linear(model_dim, model_dim)  # Feature vector output
+
+    def forward(self, x):
+        # x shape: (batch, seq_len, window_size, channels)
+        batch_size, seq_len, win_size, channels = x.size()
+        x = x.view(batch_size, seq_len, -1)  # flatten each window
+        x = self.input_proj(x)               # (batch, seq_len, model_dim)
+        x = x.permute(1, 0, 2)               # (seq_len, batch, model_dim)
+        features = self.transformer(x)       # (seq_len, batch, model_dim)
+        return features.permute(1, 0, 2)     # (batch, seq_len, model_dim)
+
+
+# get the ecg signal
 def load_ecg_record(record_path):
     record = wfdb.rdrecord(record_path)
-    signal = record.p_signal  # shape: (time, channels)
+    signal = record.p_signal
     return signal
 
 
@@ -30,27 +51,11 @@ def create_sequence_windows(signal, window_size=250, step=125):
     return np.stack(windows)  # shape: (seq_len, window_size, channels)
 
 
-class ECGTransformer(nn.Module):
-    def __init__(self, input_dim=1, model_dim=64, num_heads=4, num_layers=2, seq_len=80):
-        super().__init__()
-        self.input_proj = nn.Linear(250 * input_dim, model_dim)
-        encoder_layer = nn.TransformerEncoderLayer(d_model=model_dim, nhead=num_heads)
-        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
-        self.output_proj = nn.Linear(model_dim, model_dim)  # Feature vector output
-
-    def forward(self, x):
-        # x shape: (batch, seq_len, window_size, channels)
-        batch_size, seq_len, win_size, channels = x.size()
-        x = x.view(batch_size, seq_len, -1)  # flatten each window
-        x = self.input_proj(x)               # (batch, seq_len, model_dim)
-        x = x.permute(1, 0, 2)               # (seq_len, batch, model_dim)
-        features = self.transformer(x)       # (seq_len, batch, model_dim)
-        return features.permute(1, 0, 2)     # (batch, seq_len, model_dim)
-
-
 
 def extract_ecg_features(record_path):
+    # get the signal
     signal = load_ecg_record(record_path)
+    # preprocess the signal
     signal = preprocess_signal(signal)
     sequence = create_sequence_windows(signal)
     
